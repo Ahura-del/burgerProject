@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">burger</string>
+    <string name="facebook_app_id">965982310871829</string>
+    <string name="fb_login_protocol_scheme">fb965982310871829</string>
+</resources>
