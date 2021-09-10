@@ -1,118 +1,59 @@
-import React, {useEffect, useState} from 'react';
-import {View, Text, Image, TouchableOpacity, TextInput} from 'react-native';
+import React, {useEffect, useState, useRef} from 'react';
+import {View, Text, Image, TouchableOpacity} from 'react-native';
 
 import AsyncStorage from '@react-native-community/async-storage';
-import {Icon, Root, Toast} from 'native-base';
+import {Root, Toast} from 'native-base';
 import auth from '@react-native-firebase/auth';
-import {useDispatch , useSelector} from 'react-redux';
-import {fetchUser, putUser} from '../../../Redux';
+import {useDispatch} from 'react-redux';
+import {fetchUser} from '../../../Redux';
+import CodeInput from 'react-native-confirmation-code-input';
 import axios from 'axios';
 const Verification = ({navigation, route}) => {
- 
   const dispatch = useDispatch();
-const getEmail = useSelector(state=>state.user.user)
   const code = route.params.code;
   const stCode = String(code);
+  const inputRef = useRef('codeInputRef2');
 
-  const [num1, setNum1] = useState('');
-  const [num2, setNum2] = useState('');
-  const [num3, setNum3] = useState('');
-  const [num4, setNum4] = useState('');
-  const maxNum = 9999 ;
-  const minNum = 1000;
-  const randomNum = (Math.floor(Math.random()*(maxNum - minNum +1))+ minNum)
   const userEmail = auth().currentUser.email;
   const roteEmail = route.params.user.email;
-  
 
-  const phoneNum = route.params.codePhone + route.params.phoneNumber
+  const phoneNum = route.params.codePhone + route.params.phoneNumber;
 
-  useEffect(()=>{
- 
+  useEffect(() => {
     try {
-      dispatch(fetchUser(`http://papaberger.ir/api/user/${roteEmail}`))
-      
+      dispatch(fetchUser(`http://papaberger.ir/api/user/${roteEmail}`));
     } catch (error) {
       console.log(error);
     }
-  
-  },[])
-
-
-
+  }, []);
+  const maxNum = 9999;
+  const minNum = 1000;
+  const randomNum = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
 
   const request = {
-    "id":randomNum,
-    "userName":route.params.user.name,
-    "email":route.params.user.email,
-    "profilePicture":route.params.user.pic ? route.params.user.pic : "" ,
-    "address":"",
-    "phoneNumber":phoneNum.toString()
-  }
-  const requestPut = {
-    "id": getEmail.id,
+    "id": randomNum,
+    "userName": route.params.user.name,
     "email": route.params.user.email,
-    "userName":  route.params.user.name,
-    "phoneNumber": phoneNum,
-    "address":"",
-    "profilePicture": route.params.user.pic ? route.params.user.pic : getEmail.profilePicture
-  }
+    "profilePicture": route.params.user.pic ? route.params.user.pic : "",
+    "address": "",
+    "phoneNumber": phoneNum.toString(),
+  };
 
-  const verify = () => {
-    
-    if (num1 === '' || num2 === '' || num3 === '' || num4 === '') {
-      Toast.show({
-        text: 'Please enter the verification number in fields',
-        type: 'danger',
-        duration: 3000,
-      });
-      return;
-    }
-    if (
-      stCode[0] == num1 &&
-      stCode[1] == num2 &&
-      stCode[2] == num3 &&
-      stCode[3] == num4
-    ) {
-
-      if(getEmail.email !== undefined){
-        
-        console.log(getEmail.email);
-        axios({
-          method:"PUT",
-          url:"http://papaberger.ir/api/user",
-          headers:{
-            "Content-Type":"application/json"
-          },
-          data : requestPut
-        })
-       .then((res)=>{
-         if(res.status === 200){
-          dispatch(putUser(res.data))
+  const onFinishCheckingCode2 = async (code) => {
+    if (code) {
+      try {
+        const response = await axios.post(
+          'http://papaberger.ir/api/user',
+          request,
+        );
+        if (response.status === 200) {
           AsyncStorage.setItem('user', userEmail);
           navigation.navigate('notification');
-         }
-       })
-      }else{
-    
-        axios({
-        method : "POST",
-        url:"http://papaberger.ir/api/user",
-        headers:{
-          "Content-Type":"application/json"
-        },
-        data : request
-        
-      })
-       .then(res=>{
-         if(res.status === 200){
-          AsyncStorage.setItem('user', userEmail);
-          navigation.navigate('notification');
-         }
-       })
-.catch(err=>console.log(err))
+        }
+      } catch (error) {
+        console.log(error);
       }
-    }  else {
+    } else {
       Toast.show({
         text: 'The verify code is invalid!',
         type: 'danger',
@@ -145,9 +86,9 @@ const getEmail = useSelector(state=>state.user.user)
     clearTimeout(timer);
     startTimer();
 
-    navigation.navigate('phoneNum')
+    navigation.navigate('phoneNum');
   };
- 
+
   return (
     <Root>
       <View
@@ -159,7 +100,6 @@ const getEmail = useSelector(state=>state.user.user)
           alignContent: 'center',
         }}>
         <View style={{flex: 1, flexDirection: 'row', alignItems: 'center'}}>
-          
           <Image
             source={require('../../../assets/Image/upshape.png')}
             style={{width: '33%', height: '100%'}}
@@ -194,93 +134,54 @@ const getEmail = useSelector(state=>state.user.user)
             </Text>
           </View>
           <View style={{flexDirection: 'row', justifyContent: 'space-around'}}>
-            <TextInput
-              style={{
-                color: '#fff',
-                borderWidth: 1,
-                borderColor: '#FEB500',
-                width: 70,
-                height: 70,
-                textAlign: 'center',
-                fontSize: 20,
-              }}
+            <CodeInput
+              ref={inputRef}
               keyboardType="numeric"
-              maxLength={1}
-              onChangeText={e => setNum1(e)}
-            />
-            <TextInput
-              style={{
-                color: '#fff',
-                borderWidth: 1,
-                borderColor: '#FEB500',
-                width: 70,
-                height: 70,
-                textAlign: 'center',
+              codeLength={4}
+              size={70}
+              className="border-box"
+              activeColor="#FEB500"
+              inactiveColor="#FEB500"
+              compareWithCode={stCode}
+              cellBorderWidth={2}
+              autoFocus={false}
+              codeInputStyle={{
+                fontWeight: '800',
                 fontSize: 20,
+                color: '#fdfdfdfd',
               }}
-              keyboardType="numeric"
-              maxLength={1}
-              onChangeText={e => setNum2(e)}
-            />
-            <TextInput
-              style={{
-                color: '#fff',
-                borderWidth: 1,
-                borderColor: '#FEB500',
-                width: 70,
-                height: 70,
-                textAlign: 'center',
-                fontSize: 20,
-              }}
-              keyboardType="numeric"
-              maxLength={1}
-              onChangeText={e => setNum3(e)}
-            />
-            <TextInput
-              style={{
-                color: '#fff',
-                borderWidth: 1,
-                borderColor: '#FEB500',
-                width: 70,
-                height: 70,
-                textAlign: 'center',
-                fontSize: 20,
-              }}
-              keyboardType="numeric"
-              maxLength={1}
-              onChangeText={e => setNum4(e)}
+              onFulfill={isValid => onFinishCheckingCode2(isValid)}
             />
           </View>
           <View
             style={{
+              
               alignItems: 'flex-end',
               justifyContent: 'center',
               marginTop: 20,
             }}>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <View style={{  flexDirection: 'row', alignItems: 'center'}}>
               <TouchableOpacity
-                onPress={verify}
+                onPress={()=>navigation.navigate('phoneNum')}
                 style={{
+              
                   backgroundColor: '#FEB500',
                   paddingVertical: 12,
                   paddingHorizontal: 50,
                   borderRadius: 10,
                 }}>
-                <Text style={{fontFamily: 'Poppins', color: '#fff'}}>
-                  Verify
+                <Text style={{fontFamily: 'Poppins', color: '#fff'}}>Back</Text>
+              </TouchableOpacity>
+              {timeLeft === 0 ? (
+              <TouchableOpacity  onPress={start}>
+                <Text style={{color: '#FEB500', marginLeft: 20}}>
+                  Resend code
                 </Text>
               </TouchableOpacity>
-
-              {timeLeft === 0 ? (
-                <TouchableOpacity onPress={start}>
-                  <Text style={{color: '#FEB500', marginLeft: 20}}>
-                    Resend code
-                  </Text>
-                </TouchableOpacity>
               ) : (
-                <Text style={{color: '#FEB500', marginLeft: 50}}>
-                  00:{timeLeft}
-                </Text>
+              <Text style={{color: '#FEB500', marginLeft: 50 }}>
+                00:{timeLeft}
+              </Text>
               )}
             </View>
           </View>
